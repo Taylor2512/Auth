@@ -1,0 +1,15 @@
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\bin\Debug\net8.0\Auth.Shared.deps.json
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\bin\Debug\net8.0\Auth.Shared.dll
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\bin\Debug\net8.0\Auth.Shared.pdb
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\Auth.Shared.csproj.AssemblyReference.cache
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\Auth.Shared.GeneratedMSBuildEditorConfig.editorconfig
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\Auth.Shared.AssemblyInfoInputs.cache
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\Auth.Shared.AssemblyInfo.cs
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\Auth.Shared.csproj.CoreCompileInputs.cache
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\Auth.Shared.sourcelink.json
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\Auth.Shared.dll
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\refint\Auth.Shared.dll
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\Auth.Shared.pdb
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\ref\Auth.Shared.dll
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\bin\Debug\net8.0\Auth.Shared.runtimeconfig.json
+C:\Trabajos\ServiceEvents\Backend\Services\Auth\Auth.Shared\obj\Debug\net8.0\Auth.Shared.genruntimeconfig.cache

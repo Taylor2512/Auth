@@ -1,44 +1,68 @@
-var builder = WebApplication.CreateBuilder(args);
+using Auth.Api.Filters;
+using Auth.Api.Midleware;
+using Auth.Application.Configuration;
+using Auth.Infrastructure.Persistence;
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.BearerToken;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
 
-var app = builder.Build();
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Configure the HTTP request pipeline.
+
+builder.Services.AddEndpointsApiExplorer().AddControllers()
+//    .ConfigureApiBehaviorOptions(options =>
+//{
+//    options.InvalidModelStateResponseFactory = context => context.GenerateBadRequest();
+    
+//})
+
+    ;
+builder.Services.AddSwaggerGen().RegisterServices().RegisterMappings();
+builder.Services
+    .AddDbContext<ApplicationDbContext>(
+        b => b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), option =>
+        {
+            _ = option.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+        }));
+var secret = builder.Configuration["Jwt:Key"];
+var key = Encoding.ASCII.GetBytes(secret);
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key)
+            };
+        });
+
+
+
+WebApplication app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    _ = app.UseSwagger();
+    _ = app.UseSwaggerUI();
 }
-
+else
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
 app.UseHttpsRedirection();
-
-var summaries = new[]
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthorization();
+app.UseCustomErrorHandling(); // Agrega el middleware personalizado de manejo de errores aquí
+app.UseEndpoints(endpoints =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
-
+    endpoints.MapControllers();
+});
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
