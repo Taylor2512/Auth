@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace Auth.Shared.Extensions.Configurations
 {
+    /// <summary>
+    /// Provides utility methods for registering implementations of interfaces in the dependency container.
+    /// </summary>
     public static class ConfigurationTools
     {
         /// <summary>
@@ -23,6 +26,34 @@ namespace Auth.Shared.Extensions.Configurations
             services.AddAutoMapper(assemblies);
 
             RegisterAllImplementationsByAssembly(services, assemblies);
+        }
+        // Otros métodos de la clase ConfigurationTools...
+
+        /// <summary>
+        /// Registra todas las implementaciones de una interfaz en el contenedor de dependencias.
+        /// </summary>
+        /// <typeparam name="TInterface">La interfaz cuyas implementaciones se van a registrar.</typeparam>
+        /// <param name="services">El contenedor de dependencias.</param>
+        /// <param name="assemblyBase">El ensamblado que contiene las implementaciones de la interfaz.</param>
+        public static void RegisterImplementationsOfInterface<TInterface>(this IServiceCollection services, Assembly assemblyBase)
+        {
+            var assemblies = assemblyBase.GetFilteredReferencedAssemblies();
+            RegisterImplementationsOfInterfaceByAssembly<TInterface>(services, assemblies);
+        }
+
+        private static void RegisterImplementationsOfInterfaceByAssembly<TInterface>(IServiceCollection services, List<Assembly> assemblies)
+        {
+            var interfaceType = typeof(TInterface);
+            foreach (var assembly in assemblies)
+            {
+                var implementations = assembly.GetTypes()
+                    .Where(type => type.GetInterfaces().Contains(interfaceType) && !type.IsAbstract && !type.IsInterface);
+
+                foreach (var implementation in implementations)
+                {
+                    services.AddTransient(interfaceType, implementation);
+                }
+            }
         }
         /// <summary>
         /// Metodo que registra todas las implementaciones de las interfaces en el contenedor de dependencias
@@ -107,21 +138,14 @@ namespace Auth.Shared.Extensions.Configurations
 
             visitedTypes.Add(type);
 
-            var constructor = type.GetConstructors().FirstOrDefault();
+            ConstructorInfo? constructor = type.GetConstructors().FirstOrDefault();
             if (constructor != null)
             {
-                var parameters = constructor.GetParameters();
-                if (parameters!=null&& parameters.Any())
+                ParameterInfo[]? parameters = constructor.GetParameters();
+                if (parameters != null && parameters.ToList().Exists(param => HasCircularDependency(param.ParameterType, new HashSet<Type>(visitedTypes))))
                 {
-                    foreach (var param in parameters)
-                    {
-                        if (HasCircularDependency(param.ParameterType, new HashSet<Type>(visitedTypes)))
-                        {
-                            return true;
-                        }
-                    }
+                    return true;
                 }
-                
             }
 
             visitedTypes.Remove(type);

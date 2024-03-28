@@ -2,6 +2,9 @@
 
 namespace Auth.Core.Entity
 {
+    /// <summary>
+    /// Represents a company entity.
+    /// </summary>
     [Table("Company")]
     public class Company : BaseEntity<int>
     {

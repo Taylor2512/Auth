@@ -2,7 +2,10 @@
 using Auth.Application.Dto.Request;
 using Auth.Application.Interface;
 
+using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Mvc;
+
+
 
 
 namespace Auth.Api.Controller
@@ -14,39 +17,28 @@ namespace Auth.Api.Controller
         [HttpPost("RegistryUser")]
         public async Task<IActionResult> RegistryUser([FromBody] UserRequest request)
         {
-            try
-            {
+            
                 await userService.RegistryUser(request);
                 return Ok("Usuario registrado con éxito");
-
-            }
-            catch (InvalidDataException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+          
         }
 
         [HttpPost("Login")]
         [ResponseCache(Duration = 10, Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> Login([FromBody] UserRequest request)
         {
-            try
-            {
+            
                 UserDto user = await userService.Login(request);
                 return Ok(user);
-            }
-            catch (InvalidDataException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
-            }
+           
+        }
+        [HttpPost("RefreshToken")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+           
+                AccessTokenResponse token = await userService.GenerateRefreshToken(request.RefreshToken);
+                return Ok(token);
+           
         }
 
     }

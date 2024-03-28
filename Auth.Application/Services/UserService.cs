@@ -1,6 +1,7 @@
 ﻿using Auth.Application.Dto;
 using Auth.Application.Dto.Request;
 using Auth.Application.Interface;
+using Auth.Application.Security;
 using Auth.Core.Entity;
 using Auth.Infrastructure.Persistence;
 
@@ -12,8 +13,28 @@ using Microsoft.Extensions.Configuration;
 
 namespace Auth.Application.Services
 {
-    public class UserService(ApplicationDbContext _context, IConfiguration _configuration, IMapper _mapper, JwtSecurity _jwtSecurity) : IUserService
+    public class UserService : IUserService
     {
+        private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly IMapper _mapper;
+        private readonly JwtSecurity _jwtSecurity;
+        private readonly PasswordHandler _passwordHandler; // Inyectar PasswordHandler
+
+        public UserService(
+            ApplicationDbContext context,
+            IConfiguration configuration,
+            IMapper mapper,
+            JwtSecurity jwtSecurity,
+            PasswordHandler passwordHandler) // Agregar PasswordHandler al constructor
+        {
+            _context = context;
+            _configuration = configuration;
+            _mapper = mapper;
+            _jwtSecurity = jwtSecurity;
+            _passwordHandler = passwordHandler; // Asignar PasswordHandler
+        }
+
         public async Task<UserDto> Login(UserRequest request)
         {
             var user = await _context.Users.FirstOrDefaultAsync(x => x.IsActive && x.Email == request.Email);
@@ -23,23 +44,20 @@ namespace Auth.Application.Services
             }
             else
             {
-                if (request.ValidatePassword(user.Password, user.Salt))
+                if (_passwordHandler.ValidatePassword(request.Password, user.Password, user.Salt))
                 {
-                    // Generar token de acceso
                     string accessToken = _jwtSecurity.GenerateAccessToken(user.Id);
-                    // Generar token de actualización
                     string refreshToken = _jwtSecurity.GenerateRefreshToken(user.Id);
 
-                    // Devolver el usuario y los tokens generados
                     UserDto userDto = _mapper.Map<UserDto>(user);
-                    AccessTokenResponse tokenResponse= new() { 
-                    AccessToken = accessToken,
-                    RefreshToken = refreshToken,
-                    ExpiresIn =Convert.ToInt32( _configuration["jwt:AccessTokenExpiryTime"]),
-
+                    AccessTokenResponse tokenResponse = new()
+                    {
+                        AccessToken = accessToken,
+                        RefreshToken = refreshToken,
+                        ExpiresIn = Convert.ToInt32(_configuration["jwt:AccessTokenExpiryTime"])
                     };
-                     userDto.Token = tokenResponse;
- 
+                    userDto.Token = tokenResponse;
+
                     return userDto;
                 }
                 else
@@ -61,16 +79,21 @@ namespace Auth.Application.Services
                 throw new InvalidDataException("El correo ya está registrado");
             }
 
-            request.Excecute();
-            Users usuarionuevo = _mapper.Map<Users>(request);
-            _ = _context.Users.Add(usuarionuevo);
-            _ = await _context.SaveChangesAsync();
+            byte[] salt = _passwordHandler.GenerateSalt();
+            string hashedPassword = _passwordHandler.HashPassword(request.Password, salt);
+
+            Users newUser = _mapper.Map<Users>(request);
+            newUser.Salt = salt;
+            newUser.Password = hashedPassword;
+
+            _context.Users.Add(newUser);
+            await _context.SaveChangesAsync();
         }
+
         public async Task<AccessTokenResponse> GenerateRefreshToken(string refreshToken)
         {
             var newTokens = _jwtSecurity.GenerateNewTokens(refreshToken);
-         return newTokens;
-
+            return await Task.FromResult(newTokens);
         }
     }
 }

@@ -5,21 +5,51 @@ using Auth.Infrastructure.Persistence;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
+using Auth.Api.Model;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddEndpointsApiExplorer()
+                .AddControllers(option =>{option.Filters.Add<ApiExceptionFilter>();})
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.PropertyNamingPolicy= JsonNamingPolicy.CamelCase;
+                    options.JsonSerializerOptions.DictionaryKeyPolicy = null;
+                    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+                    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                    options.AllowInputFormatterExceptionMessages = true;
+                    options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
+                    options.JsonSerializerOptions.AllowTrailingCommas = true;
+                    options.JsonSerializerOptions.ReadCommentHandling = JsonCommentHandling.Skip;
+                    options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+                    options.JsonSerializerOptions.IncludeFields = true;
+ 
 
-builder.Services.AddEndpointsApiExplorer().AddControllers()
-//    .ConfigureApiBehaviorOptions(options =>
-//{
-//    options.InvalidModelStateResponseFactory = context => context.GenerateBadRequest();
-    
-//})
+                }) 
+                ;
 
-    ;
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = JsonSerializer.Serialize(context.ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList());
+        var response = new ApiResponse();
+        var errorResponse = new ErrorResponse();
+        errorResponse.Message = errors;
+        response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        response.Error = errorResponse;
+        return new ObjectResult(response)
+        {
+            StatusCode = StatusCodes.Status422UnprocessableEntity
+        };
+    };
+});
 builder.Services.AddSwaggerGen().RegisterServices().RegisterMappings();
 builder.Services
     .AddDbContext<ApplicationDbContext>(
@@ -28,7 +58,7 @@ builder.Services
             _ = option.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
         }));
 var secret = builder.Configuration["Jwt:Key"];
-var key = Encoding.ASCII.GetBytes(secret);
+var key = Encoding.ASCII.GetBytes(secret ?? throw new ArgumentException(" no puede ser null"));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
         {
@@ -60,9 +90,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
-app.UseCustomErrorHandling(); // Agrega el middleware personalizado de manejo de errores aquí
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-});
+app.UseCustomErrorHandling(); // Agrega el middleware personalizado de manejo de errores aquï¿½
+app.MapControllers();
 app.Run();

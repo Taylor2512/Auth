@@ -1,5 +1,6 @@
 ﻿using Auth.Application.Dto;
 using Auth.Application.Interface;
+using Auth.Application.Security;
 using Auth.Application.Services;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,7 @@ namespace Auth.Application.Configuration
     {
         public static IServiceCollection RegisterServices(this IServiceCollection services)
         {
-          services.AddScoped<IUserService, UserService>().AddScoped<JwtSecurity>();
+          services.AddScoped<IUserService, UserService>().AddScoped<JwtSecurity>().AddScoped< PasswordHandler>();
 
             return services;
         }
