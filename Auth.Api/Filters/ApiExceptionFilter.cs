@@ -31,8 +31,15 @@ namespace Auth.Api.Filters
 
                 default:
                     response.StatusCode = StatusCodes.Status500InternalServerError;
-                    errorResponse.Message = "Ocurrió un error interno en el servidor.";
-                    context.HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    if(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+                    {
+                        errorResponse.Message = context.Exception.Message;
+                    }
+                    else
+                    {
+                        errorResponse.Message = "Ocurrió un error interno en el servidor.";
+                    }
+                     context.HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
                     break;
             }
 
