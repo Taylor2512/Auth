@@ -33,7 +33,7 @@ namespace Auth.Api.Filters
                     response.StatusCode = StatusCodes.Status500InternalServerError;
                     if(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
                     {
-                        errorResponse.Message = context.Exception.Message;
+                        errorResponse.Message = context.Exception.InnerException?.InnerException?.Message?? context.Exception.InnerException?.Message?? context.Exception.Message;
                     }
                     else
                     {

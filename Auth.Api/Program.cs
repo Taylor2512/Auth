@@ -1,72 +1,95 @@
-using System.Globalization;
-using System.Text;
 using Auth.Api.Filters;
 using Auth.Api.Midleware;
+using Auth.Application.Configuration;
 using Auth.Infrastructure.Persistence;
 
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
+using Microsoft.AspNetCore.Mvc;
+using Auth.Api.Model;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Configura la cultura invariante
-CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
-CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
+builder.Services.AddEndpointsApiExplorer()
+                .AddControllers(option => { option.Filters.Add<ApiExceptionFilter>(); })
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                    options.JsonSerializerOptions.DictionaryKeyPolicy = null;
+                    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+                    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                    options.AllowInputFormatterExceptionMessages = true;
+                    options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowReadingFromString;
+                    options.JsonSerializerOptions.AllowTrailingCommas = true;
+                    options.JsonSerializerOptions.ReadCommentHandling = JsonCommentHandling.Skip;
+                    options.JsonSerializerOptions.Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+                    options.JsonSerializerOptions.IncludeFields = true;
 
-// Configuración del servicio
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddControllers(option => { option.Filters.Add<ApiExceptionFilter>(); });
+                })
+                ;
 
-// Configuración JSON
-builder.Services.AddControllers().AddJsonOptions(options =>
+builder.Services.RegisterServices().RegisterMappings();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
-    // Configuración JSON personalizada aquí
-});
-
-// Configuración del contexto de la base de datos
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), option =>
+    options.InvalidModelStateResponseFactory = context =>
     {
-        option.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
-    });
-});
-
-// Configuración de la autenticación JWT
-var secret = builder.Configuration["Jwt:Key"];
-var key = Encoding.ASCII.GetBytes(secret ?? throw new ArgumentException("La clave no puede ser null"));
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+        var errors = JsonSerializer.Serialize(context.ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList());
+        var response = new ApiResponse();
+        var errorResponse = new ErrorResponse();
+        errorResponse.Message = errors;
+        response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        response.Error = errorResponse;
+        return new ObjectResult(response)
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key)
+            StatusCode = StatusCodes.Status422UnprocessableEntity
         };
-    });
+    };
+});
+builder.Services.AddSwaggerGen().RegisterServices().RegisterMappings();
+builder.Services
+    .AddDbContext<ApplicationDbContext>(
+        b => b.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), option =>
+        {
+            _ = option.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+        }));
+var secret = builder.Configuration["Jwt:Key"];
+var key = Encoding.ASCII.GetBytes(secret ?? throw new ArgumentException(" no puede ser null"));
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key)
+            };
+        });
 
-// Configuración de Swagger
-builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
 
-// Middleware y rutas
-app.UseSwagger();
-app.UseSwaggerUI();
-app.UseExceptionHandler("/Home/Error");
-app.UseHsts();
+WebApplication app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    _ = app.UseSwagger();
+    _ = app.UseSwaggerUI();
+}
+else
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
-app.UseCustomErrorHandling(); // Agrega el middleware personalizado de manejo de errores aquí
+app.UseCustomErrorHandling(); // Agrega el middleware personalizado de manejo de errores aqu�
 app.MapControllers();
 app.Run();

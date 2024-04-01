@@ -2,6 +2,7 @@
 using Auth.Application.Interface;
 using Auth.Application.Security;
 using Auth.Application.Services;
+using Auth.Shared.Services;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,7 +14,10 @@ namespace Auth.Application.Configuration
     {
         public static IServiceCollection RegisterServices(this IServiceCollection services)
         {
-          services.AddScoped<IUserService, UserService>().AddScoped<JwtSecurity>().AddScoped< PasswordHandler>();
+          services.AddTransient<IUserService, UserService>().AddTransient<IEmailSender, EmailSender>()
+                .AddTransient<JwtSecurity>()
+                .AddTransient< PasswordHandler>();
+            services.AddTransient<IRabbitMQManager, RabbitMQManager>();
 
             return services;
         }

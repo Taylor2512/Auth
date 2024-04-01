@@ -4,6 +4,7 @@ using Auth.Application.Interface;
 using Auth.Application.Security;
 using Auth.Core.Entity;
 using Auth.Infrastructure.Persistence;
+using Auth.Shared.Services;
 
 using AutoMapper;
 
@@ -20,19 +21,21 @@ namespace Auth.Application.Services
         private readonly IMapper _mapper;
         private readonly JwtSecurity _jwtSecurity;
         private readonly PasswordHandler _passwordHandler; // Inyectar PasswordHandler
-
+        private readonly IEmailSender _emailSender;
         public UserService(
             ApplicationDbContext context,
             IConfiguration configuration,
             IMapper mapper,
             JwtSecurity jwtSecurity,
-            PasswordHandler passwordHandler) // Agregar PasswordHandler al constructor
+            PasswordHandler passwordHandler,
+            IEmailSender emailSender)
         {
             _context = context;
             _configuration = configuration;
             _mapper = mapper;
             _jwtSecurity = jwtSecurity;
             _passwordHandler = passwordHandler; // Asignar PasswordHandler
+            _emailSender = emailSender;
         }
 
         public async Task<UserDto> Login(UserRequest request)
@@ -88,6 +91,12 @@ namespace Auth.Application.Services
 
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync();
+            await _emailSender.EnqueueEmailAsync(new ()
+            {
+                To = request.Email,
+                Subject = "Registro exitoso",
+                Body = "Registro exitoso"
+            });
         }
 
         public async Task<AccessTokenResponse> GenerateRefreshToken(string refreshToken)
