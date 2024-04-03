@@ -27,19 +27,9 @@ namespace Auth.Shared.Services
             var hostName = rabbitMQConfig["HostName"];
             var userName = rabbitMQConfig["UserName"];
             var password = rabbitMQConfig["Password"];
-            if (string.IsNullOrEmpty(hostName) || string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(password))
-            {
-
-            }
-            else
-            {
-                var factory = new ConnectionFactory() { HostName = hostName, UserName = userName, Password = password };
-                _connection = factory.CreateConnection();
-                _channel = _connection.CreateModel();
-            }
-              
-
-           
+            var factory = new ConnectionFactory() { HostName = hostName, UserName = userName, Password = password };
+            _connection = factory.CreateConnection();
+            _channel = _connection.CreateModel();
         }
 
         public void DeclareQueue(string queueName, string exchangeName)
@@ -60,7 +50,7 @@ namespace Auth.Shared.Services
         public void SendMessage(string queueName, string message)
         {
             byte[] body = Encoding.UTF8.GetBytes(message);
-            DeclareQueue(queueName,$"exchange_{queueName}"); // Asegúrate de que la cola esté declarada antes de enviar el mensaje
+            DeclareQueue(queueName, $"exchange_{queueName}"); // Asegúrate de que la cola esté declarada antes de enviar el mensaje
             _channel.BasicPublish(exchange: "", routingKey: queueName, basicProperties: null, body: body);
             Console.WriteLine(" [x] Sent '{0}'", message);
         }

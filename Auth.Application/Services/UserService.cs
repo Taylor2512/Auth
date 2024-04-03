@@ -2,6 +2,7 @@
 using Auth.Application.Dto.Request;
 using Auth.Application.Interface;
 using Auth.Application.Security;
+using Auth.Core.Dto.SMTP;
 using Auth.Core.Entity;
 using Auth.Infrastructure.Persistence;
 using Auth.Shared.Services;
@@ -90,13 +91,23 @@ namespace Auth.Application.Services
             newUser.Password = hashedPassword;
 
             _context.Users.Add(newUser);
-            await _context.SaveChangesAsync();
-            await _emailSender.EnqueueEmailAsync(new ()
+            using var transaction = _context.Database.BeginTransaction();
+            try
             {
-                To = request.Email,
-                Subject = "Registro exitoso",
-                Body = "Registro exitoso"
-            });
+                await _context.SaveChangesAsync();
+                await _emailSender.EnqueueEmailAsync(new EmailRequest
+                {
+                    To = request.Email,
+                    Subject = "Registro exitoso",
+                    Body = "Registro exitoso"
+                });
+                transaction.Commit();
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                throw new ArgumentException(ex.Message);
+            }
         }
 
         public async Task<AccessTokenResponse> GenerateRefreshToken(string refreshToken)
